@@ -10,3 +10,4 @@
 - [Glad Deepwiki](https://deepwiki.com/Dav1dde/glad/1-overview)
 - [Vertex Pipeline](https://wikis.khronos.org/opengl/Rendering_Pipeline_Overview)
 - [OpenGL Quick Reference PDF](https://www.khronos.org/files/opengl45-quick-reference-card.pdf)
+- [GetStarted SDL2 PDF](https://techresourcehub.github.io/SoftwareEngineeringFoundation/resources/SDL2%20-%20Get%20started.pdf)
