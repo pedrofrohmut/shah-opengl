@@ -8,6 +8,8 @@
   #define DEBUG(expr)
 #endif
 
+const uint64_t FRAME_TIME_60FPS = 16.6666667;
+
 SDL_GLContext InitializeProgram(SDL_Window* window, int width, int height);
 void MainLoop(SDL_Window* window);
 void CleanUp(SDL_Window* window);
@@ -95,16 +97,35 @@ void Draw() {}
 
 void MainLoop(SDL_Window* window)
 {
+    uint32_t fpsCounter = 0;
+    uint64_t fpsTimeAcc = 0;
     bool shouldClose = false;
+
     while (!shouldClose)
     {
+        const uint64_t start = SDL_GetTicks64();
+
         shouldClose = Input();
         PreDraw();
         Draw();
 
         SDL_GL_SwapWindow(window);
-        SDL_Delay(16); // 16 ms for ~60fps
-    }
+
+        fpsCounter += 1;
+        fpsTimeAcc += FRAME_TIME_60FPS;
+
+        if (fpsTimeAcc >= 1000)
+        {
+            std::cout << "FPS: " << fpsCounter << '\n';
+            fpsCounter = 0;
+            fpsTimeAcc = 0;
+        }
+
+        const uint64_t end = SDL_GetTicks64();
+        const uint64_t frameTime = end - start;
+
+        SDL_Delay(FRAME_TIME_60FPS - frameTime);
+    }// game loop
 }
 
 void CleanUp(SDL_Window* window)
