@@ -1,5 +1,14 @@
 #! /usr/bin/env lua
 
+--[[
+   This is a build script for cpp main app.
+
+   when called with no flags this build should detect the platform and do a release
+   build for it or show a todo message otherwise.
+
+   All other options should be with use of flags.
+]]
+
 local print_help = function()
    print("TODO: print help for this")
 end
