@@ -1,4 +1,5 @@
 #include <SDL2/SDL.h>
+#include <glad/glad.h>
 
 #include <iostream>
 #include <cstdint>
@@ -26,6 +27,7 @@ struct App
 
     bool init()
     {
+        // Init SDL
         if (SDL_Init(SDL_INIT_VIDEO) != 0)
         {
             std::cout << "[ERROR] SDL2 could not initialize video subsystem.\n";
@@ -45,6 +47,7 @@ struct App
 
         SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
+        // Create SDL Window
         const uint32_t winFlags = SDL_WINDOW_OPENGL;
         window = SDL_CreateWindow("My OpenGL App", 0, 0, screenWidth, screenHeight, winFlags);
         if (window == nullptr)
@@ -55,6 +58,7 @@ struct App
         }
         DEBUG("[Success] Window is ready to go.\n");
 
+        // Create OpenGL Context
         glContext = SDL_GL_CreateContext(window);
         if (glContext == nullptr)
         {
@@ -65,11 +69,22 @@ struct App
         }
         DEBUG("[Success] OpenGl context created.\n");
 
+        // Init glad
+        if (!gladLoadGLLoader(SDL_GL_GetProcAddress))
+        {
+            std::cout << "[ERROR] Glad failed to initialize\n";
+            SDL_GL_DeleteContext(glContext);
+            SDL_DestroyWindow(window);
+            SDL_Quit();
+            return false;
+        }
+        DEBUG("[Success] Glad loaded. OpenGL functions available.\n");
+
         return true;
     }
 };
 
-bool pollEvents()
+bool processInput()
 {
     SDL_Event event;
 
@@ -87,25 +102,44 @@ bool pollEvents()
     return false;
 }
 
+void preDraw() {}
+
+void draw() {}
+
 void mainLoop(App& app)
 {
     bool shouldClose = false;
 
     while (!shouldClose)
     {
-        shouldClose = pollEvents();
+        shouldClose = processInput();
 
+        preDraw();
+
+        draw();
+
+        // Updates the screen
         SDL_GL_SwapWindow(app.window);
 
         SDL_Delay(16); // 16ms ~63fps
     }
 }
 
+void getOpenGLVersionInfo()
+{
+    std::cout << "Vendor:           "  << glGetString(GL_VENDOR)                    << '\n'
+              << "Renderer:         "  << glGetString(GL_RENDERER)                  << '\n'
+              << "Version:          "  << glGetString(GL_VERSION)                   << '\n'
+              << "Shading Language: "  << glGetString(GL_SHADING_LANGUAGE_VERSION)  << '\n';
+}
+
 int main(void)
 {
-    App app(640, 480);
+    App app(1280, 720);
 
     if (!app.init()) return 1;
+
+    getOpenGLVersionInfo();
 
     mainLoop(app);
 

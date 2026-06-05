@@ -45,8 +45,8 @@ local main = function()
          "-I./include",
          "-o ", app_name,
          "./src/main.cpp ./src/glad.c",
-         "-ldl -lSDL2 -lGL",
-         -- "-ldl -lSDL2",
+         "-ldl -lSDL2",
+         -- "-lGL",
       },
       " "
    )
