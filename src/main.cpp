@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <cstdint>
+#include <vector>
 
 #include "macros.h"
 #include "constants.h"
@@ -84,6 +85,15 @@ struct App
     }
 };
 
+struct VertexSpec
+{
+    const GLuint vertexArrayObject;
+    const GLuint vertexBufferObject;
+
+    VertexSpec(GLuint vao, GLuint vbo)
+        : vertexArrayObject(vao), vertexBufferObject(vbo) {}
+};
+
 bool processInput()
 {
     SDL_Event event;
@@ -110,8 +120,14 @@ void mainLoop(App& app)
 {
     bool shouldClose = false;
 
+    float fpsTimeAcc = 0.0f;
+    uint32_t fpsCounter = 0;
+    const float targetFrameTime = FRAME_TIME_120FPS;
+
     while (!shouldClose)
     {
+        const uint64_t start = SDL_GetTicks64();
+
         shouldClose = processInput();
 
         preDraw();
@@ -121,25 +137,86 @@ void mainLoop(App& app)
         // Updates the screen
         SDL_GL_SwapWindow(app.window);
 
-        SDL_Delay(16); // 16ms ~63fps
+        // Manage FPS
+        fpsCounter += 1;
+        fpsTimeAcc += targetFrameTime;
+        if (fpsTimeAcc >= MS_SECOND) // Run it every 1 second
+        {
+            std::cout << "FPS: " << fpsCounter << '\n';
+            fpsCounter = 0;
+            fpsTimeAcc = 0.0f;
+        }
+
+        // FrameTime
+        const uint64_t end = SDL_GetTicks64();
+        const uint64_t frameTime = end - start;
+
+        // Delay if needed
+        if (frameTime < targetFrameTime)
+        {
+            const uint32_t delay = static_cast<uint32_t>(targetFrameTime) - frameTime;
+            if (delay < MS_SECOND) // Won't crash on weird stuff, only small freeze
+                SDL_Delay(delay);
+        }
     }
 }
 
 void getOpenGLVersionInfo()
 {
-    std::cout << "Vendor:           "  << glGetString(GL_VENDOR)                    << '\n'
-              << "Renderer:         "  << glGetString(GL_RENDERER)                  << '\n'
-              << "Version:          "  << glGetString(GL_VERSION)                   << '\n'
-              << "Shading Language: "  << glGetString(GL_SHADING_LANGUAGE_VERSION)  << '\n';
+    std::cout << "Vendor: "           << glGetString(GL_VENDOR)                    << '\n'
+              << "Renderer: "         << glGetString(GL_RENDERER)                  << '\n'
+              << "Version: "          << glGetString(GL_VERSION)                   << '\n'
+              << "Shading Language: " << glGetString(GL_SHADING_LANGUAGE_VERSION)  << '\n';
 }
+
+VertexSpec genVertexSpec()
+{
+    // Setup in the CPU
+    const std::vector<GLfloat> vertexPositions{
+        //  x,     y,    z,
+        -0.8f, -0.8f, 0.0f, // vertex 1
+         0.8f, -0.8f, 0.0f, // vertex 2
+         0.0f,  0.8f, 0.0f, // vertex 3
+    };
+
+    // Setup for the GPU
+
+    // VAO - Vertex Array Object
+    GLuint vertexArrayObject = 0;
+    glGenVertexArrays(1, &vertexArrayObject);
+    glBindVertexArray(vertexArrayObject);
+
+    // VBO - Vertex Buffer Object
+    GLuint vertexBufferObject = 0;
+    glGenBuffers(1, &vertexBufferObject);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBufferObject);
+    glBufferData(GL_ARRAY_BUFFER,
+                 vertexPositions.size() * sizeof(GLfloat),
+                 vertexPositions.data(),
+                 GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, (GLvoid*) 0);
+
+    // Clean up
+    glBindVertexArray(0);
+    glDisableVertexAttribArray(0);
+
+    VertexSpec spec(vertexArrayObject, vertexBufferObject);
+    return spec;
+}
+
+void createGraphicsPipeline() {}
 
 int main(void)
 {
     App app(1280, 720);
-
     if (!app.init()) return 1;
 
     getOpenGLVersionInfo();
+
+    VertexSpec spec = genVertexSpec();
+    createGraphicsPipeline();
 
     mainLoop(app);
 
