@@ -8,15 +8,33 @@
 #include "macros.h"
 #include "constants.h"
 
+struct VertexSpec
+{
+    GLuint vertexArrayObject;
+    GLuint vertexBufferObject;
+
+    VertexSpec(GLuint vao, GLuint vbo)
+        : vertexArrayObject(vao), vertexBufferObject(vbo) {}
+};
+
 struct App
 {
     const uint32_t screenWidth;
     const uint32_t screenHeight;
     SDL_Window* window;
     SDL_GLContext glContext;
+    VertexSpec vertexSpec;
+    GLuint shaderProgram;
 
     App(uint32_t width, uint32_t height)
-        : screenWidth(width), screenHeight(height), window(nullptr), glContext(nullptr) {}
+        : screenWidth(width),
+          screenHeight(height),
+          window(nullptr),
+          glContext(nullptr),
+          vertexSpec(0, 0),
+          shaderProgram(0)
+    {
+    }
 
     ~App()
     {
@@ -85,15 +103,6 @@ struct App
     }
 };
 
-struct VertexSpec
-{
-    const GLuint vertexArrayObject;
-    const GLuint vertexBufferObject;
-
-    VertexSpec(GLuint vao, GLuint vbo)
-        : vertexArrayObject(vao), vertexBufferObject(vbo) {}
-};
-
 bool processInput()
 {
     SDL_Event event;
@@ -112,9 +121,25 @@ bool processInput()
     return false;
 }
 
-void preDraw() {}
+void preDraw(App& app)
+{
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
 
-void draw() {}
+    glViewport(0, 0, app.screenWidth, app.screenHeight);
+    glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
+
+    glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+    glUseProgram(app.shaderProgram);
+}
+
+void draw(App& app)
+{
+    glBindVertexArray(app.vertexSpec.vertexArrayObject);
+    glBindBuffer(GL_ARRAY_BUFFER, app.vertexSpec.vertexBufferObject);
+    glDrawArrays(GL_TRIANGLES, 0 , 3);
+}
 
 void mainLoop(App& app)
 {
@@ -130,9 +155,9 @@ void mainLoop(App& app)
 
         shouldClose = processInput();
 
-        preDraw();
+        preDraw(app);
 
-        draw();
+        draw(app);
 
         // Updates the screen
         SDL_GL_SwapWindow(app.window);
@@ -196,7 +221,7 @@ VertexSpec genVertexSpec()
                  GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, (GLvoid*) 0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 3, 0);
 
     // Clean up
     glBindVertexArray(0);
@@ -206,17 +231,86 @@ VertexSpec genVertexSpec()
     return spec;
 }
 
-void createGraphicsPipeline() {}
+GLuint compileShader(GLenum shaderType, const std::string& shaderSource)
+{
+    GLuint shaderObject = 0;
+
+    switch (shaderType)
+    {
+    case GL_VERTEX_SHADER: {
+        shaderObject = glCreateShader(GL_VERTEX_SHADER);
+    } break;
+    case GL_FRAGMENT_SHADER: {
+        shaderObject = glCreateShader(GL_FRAGMENT_SHADER);
+    } break;
+    default:
+        std::cout << "Invalid shader type.\n";
+        exit(1);
+    }
+
+    const char* src = shaderSource.c_str();
+    glShaderSource(shaderObject, 1, &src, nullptr);
+    glCompileShader(shaderObject);
+
+    return shaderObject;
+}
+
+GLuint createShaderProgram(const std::string& vertexShaderSource, const std::string& fragmentShaderSource)
+{
+    GLuint programObject = glCreateProgram();
+    GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexShaderSource);
+    GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
+
+    glAttachShader(programObject, vertexShader);
+    glAttachShader(programObject, fragmentShader);
+    glLinkProgram(programObject);
+
+    // Validate our program
+    glValidateProgram(programObject);
+
+    // TODO: glDetachShader, glDeleteShader
+    // glDeleteShader(vertexShader);
+    // glDeleteShader(fragmentShader);
+
+    return programObject;
+}
+
+GLuint createGraphicsPipeline()
+{
+    // Vertex shaders executes once per vertex, and will be in charge of the final
+    // position of the vertex.
+    const std::string vertexShaderSource =
+        "#version 410 core\n"
+        "in vec4 position;\n"
+        "void main()\n"
+        "{\n"
+        "  gl_Position = vec4(position.x, position.y, position.z, position.w);\n"
+        "}\n";
+
+    // Fragment Shader executes once per fragment (i.e. roughly for every pixel that
+    // will be rasterized), and in part determines the final color that will be sent
+    // to the screen.
+    const std::string fragmentShaderSource =
+        "#version 410 core\n"
+        "out vec4 color;\n"
+        "void main()"
+        "{\n"
+        "  color = vec4(1.0f, 0.5f, 0.0f, 1.0f);\n"
+        "}\n";
+
+    return createShaderProgram(vertexShaderSource, fragmentShaderSource);
+}
 
 int main(void)
 {
     App app(1280, 720);
-    if (!app.init()) return 1;
+    if (!app.init())
+        return 1;
 
     getOpenGLVersionInfo();
 
-    VertexSpec spec = genVertexSpec();
-    createGraphicsPipeline();
+    app.vertexSpec = genVertexSpec();
+    app.shaderProgram = createGraphicsPipeline();
 
     mainLoop(app);
 
