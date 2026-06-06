@@ -12,3 +12,5 @@
 - [OpenGL Quick Reference PDF](https://www.khronos.org/files/opengl45-quick-reference-card.pdf)
 - [GetStarted SDL2 PDF](https://techresourcehub.github.io/SoftwareEngineeringFoundation/resources/SDL2%20-%20Get%20started.pdf)
 - [OpenGL Khronos Ref](https://registry.khronos.org/OpenGL-Refpages/gl4/)
+- [16x9 Resolutions](https://pacoup.com/2011/06/12/list-of-true-169-resolutions/)
+- [Learn OpenGL](https://learnopengl.com/)
