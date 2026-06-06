@@ -11,10 +11,9 @@
 
 struct FpsState
 {
-    const uint32_t counter;
-    const float acc;
-
-    FpsState(uint32_t _counter, float _acc) : counter(_counter), acc(_acc) {}
+    uint64_t previousFrame;
+    uint32_t counter;
+    float acc;
 };
 
 struct VertexSpec
@@ -171,53 +170,35 @@ void draw(AppContext& app)
     glUseProgram(0);
 }
 
-/**
- * DOC: manageFPS
- * Calculate fps logic moved out of the main loop
- */
-FpsState manageFPS(const uint64_t start, uint32_t currCounter, float currAcc)
+void showFps(FpsState& state)
 {
-    const uint32_t SECOND = 1000;
-    const uint64_t end = SDL_GetTicks64();
-    const uint64_t frameTime = end - start;
+    const uint64_t thisFrame = SDL_GetTicks64();
+    const uint64_t deltaTime = thisFrame - state.previousFrame;
 
-    uint32_t counter = currCounter;
-    float acc = currAcc;
-
-    counter += 1;
-    acc += std::max(frameTime, (uint64_t)1); // Add at least 1 to acc
-
-    if (acc >= SECOND)
+    state.acc += deltaTime;
+    state.counter += 1;
+    if (state.acc >= 1000)
     {
-        std::cout << "FPS: " << counter << '\n';
-        counter = 0;
-        acc = 0.0f;
+        println_("fps: " << state.counter);
+        state.acc = 0;
+        state.counter = 0;
     }
 
-    return { counter, acc };
+    state.previousFrame = thisFrame;
 }
 
 void mainLoop(AppContext& app)
 {
     bool shouldClose = false;
-    float fpsTimeAcc = 0.0f;
-    uint32_t fpsCounter = 0;
+    FpsState fpsState = { .previousFrame = SDL_GetTicks64(), .counter = 0, .acc = 0 };
 
     while (!shouldClose)
     {
-        const uint64_t start = SDL_GetTicks64();
-
         shouldClose = processInput();
-
         preDraw(app);
-
         draw(app);
-
         SDL_GL_SwapWindow(app.window); // Updates the screen
-
-        const FpsState fps = manageFPS(start, fpsCounter, fpsTimeAcc);
-        fpsCounter = fps.counter;
-        fpsTimeAcc = fps.acc;
+        showFps(fpsState);
     }
 }
 

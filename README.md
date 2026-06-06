@@ -14,3 +14,4 @@
 - [OpenGL Khronos Ref](https://registry.khronos.org/OpenGL-Refpages/gl4/)
 - [16x9 Resolutions](https://pacoup.com/2011/06/12/list-of-true-169-resolutions/)
 - [Learn OpenGL](https://learnopengl.com/)
+- [Cpp Reference](https://en.cppreference.com/)

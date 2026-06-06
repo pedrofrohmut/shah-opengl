@@ -5,3 +5,5 @@
 #else
   #define DEBUG(expr)
 #endif
+
+#define println_(expr) std::cout << expr << '\n'
