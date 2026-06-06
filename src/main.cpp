@@ -4,9 +4,18 @@
 #include <iostream>
 #include <cstdint>
 #include <vector>
+#include <algorithm> // std::max
 
 #include "macros.h"
 #include "constants.h"
+
+struct FpsState
+{
+    const uint32_t counter;
+    const float acc;
+
+    FpsState(uint32_t _counter, float _acc) : counter(_counter), acc(_acc) {}
+};
 
 struct VertexSpec
 {
@@ -162,13 +171,37 @@ void draw(AppContext& app)
     glUseProgram(0);
 }
 
+/**
+ * DOC: manageFPS
+ * Calculate fps logic moved out of the main loop
+ */
+FpsState manageFPS(const uint64_t start, uint32_t currCounter, float currAcc)
+{
+    const uint32_t SECOND = 1000;
+    const uint64_t end = SDL_GetTicks64();
+    const uint64_t frameTime = end - start;
+
+    uint32_t counter = currCounter;
+    float acc = currAcc;
+
+    counter += 1;
+    acc += std::max(frameTime, (uint64_t)1); // Add at least 1 to acc
+
+    if (acc >= SECOND)
+    {
+        std::cout << "FPS: " << counter << '\n';
+        counter = 0;
+        acc = 0.0f;
+    }
+
+    return { counter, acc };
+}
+
 void mainLoop(AppContext& app)
 {
     bool shouldClose = false;
-
     float fpsTimeAcc = 0.0f;
     uint32_t fpsCounter = 0;
-    const float targetFrameTime = FRAME_TIME_120FPS;
 
     while (!shouldClose)
     {
@@ -180,30 +213,11 @@ void mainLoop(AppContext& app)
 
         draw(app);
 
-        // Updates the screen
-        SDL_GL_SwapWindow(app.window);
+        SDL_GL_SwapWindow(app.window); // Updates the screen
 
-        // Manage FPS
-        fpsCounter += 1;
-        fpsTimeAcc += targetFrameTime;
-        if (fpsTimeAcc >= MS_SECOND) // Run it every 1 second
-        {
-            std::cout << "FPS: " << fpsCounter << '\n';
-            fpsCounter = 0;
-            fpsTimeAcc = 0.0f;
-        }
-
-        // FrameTime - Time that takes to pass all stages of frame creation in int milliseconds
-        const uint64_t end = SDL_GetTicks64();
-        const uint64_t frameTime = end - start;
-
-        // Delay if needed
-        if (frameTime < targetFrameTime)
-        {
-            const uint32_t delay = static_cast<uint32_t>(targetFrameTime) - frameTime;
-            if (delay < MS_SECOND) // Won't crash on weird stuff, only small freeze
-                SDL_Delay(delay);
-        }
+        const FpsState fps = manageFPS(start, fpsCounter, fpsTimeAcc);
+        fpsCounter = fps.counter;
+        fpsTimeAcc = fps.acc;
     }
 }
 
