@@ -1,10 +1,13 @@
+// Third part deps
 #include <SDL2/SDL.h>
 #include <glad/glad.h>
 
+// Cpp STD
 #include <iostream>
 #include <cstdint>
 #include <vector>
-#include <algorithm> // std::max
+#include <string>
+#include <fstream>
 
 #include "macros.h"
 //#include "constants.h"
@@ -111,6 +114,23 @@ struct AppContext
     }
 };
 
+std::string loadShaderAsString(const std::string& fileName)
+{
+    std::ifstream sourceFile(fileName.c_str());
+
+    if (!sourceFile.is_open())
+        return "";
+
+    std::string loadedShader = "";
+    std::string line = "";
+    while (std::getline(sourceFile, line))
+        loadedShader += line + '\n'; // Adding \n to be sure and is cheap
+
+    sourceFile.close();
+
+    return loadedShader;
+}
+
 /**
  * processInput called in the main loop to handle sdl events queue
  * @return boolean to signal if app should close
@@ -146,7 +166,7 @@ void preDraw(AppContext& app)
     glDisable(GL_CULL_FACE);
 
     glViewport(0, 0, app.screenWidth, app.screenHeight); // Position and Size of opengl drawing
-    glClearColor(1.0f, 1.0f, 0.0f, 1.0f); // Paint the background
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f); // Paint the background
     glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT); // Clear buffers to be paint
 
     glUseProgram(app.shaderProgram); // Select current program to be used
@@ -360,24 +380,12 @@ GLuint createGraphicsPipeline()
 {
     // Vertex shaders executes once per vertex, and will be in charge of the final
     // position of the vertex.
-    const std::string vertexShaderSource =
-        "#version 410 core\n"
-        "in vec4 position;\n"
-        "void main()\n"
-        "{\n"
-        "  gl_Position = vec4(position.x, position.y, position.z, position.w);\n"
-        "}\n";
+    std::string vertexShaderSource = loadShaderAsString("./shaders/vertex.glsl");
 
     // Fragment Shader executes once per fragment (i.e. roughly for every pixel that
     // will be rasterized), and in part determines the final color that will be sent
     // to the screen.
-    const std::string fragmentShaderSource =
-        "#version 410 core\n"
-        "out vec4 color;\n"
-        "void main()"
-        "{\n"
-        "  color = vec4(1.0f, 0.5f, 0.0f, 1.0f);\n"
-        "}\n";
+    std::string fragmentShaderSource = loadShaderAsString("./shaders/fragment.glsl");
 
     return createShaderProgram(vertexShaderSource, fragmentShaderSource);
 }
