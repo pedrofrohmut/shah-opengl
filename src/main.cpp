@@ -10,7 +10,6 @@
 #include <fstream>
 
 #include "macros.h"
-//#include "constants.h"
 
 struct FpsState
 {
@@ -23,34 +22,25 @@ struct VertexSpec
 {
     GLuint vertexArrayObject;
     GLuint vertexBufferObject;
-
-    VertexSpec(GLuint vao, GLuint vbo)
-        : vertexArrayObject(vao), vertexBufferObject(vbo) {}
+    GLuint vertexBufferObjectColors;
 };
 
 struct AppContext
 {
     const uint32_t screenWidth;
     const uint32_t screenHeight;
-    SDL_Window* window;
-    SDL_GLContext glContext;
-    VertexSpec vertexSpec;
-    GLuint shaderProgram;
+    SDL_Window* window = nullptr;
+    SDL_GLContext glContext = nullptr;
+    VertexSpec vertexSpec = {};
+    GLuint shaderProgram = 0;
 
     AppContext(uint32_t width, uint32_t height)
-        : screenWidth(width),
-          screenHeight(height),
-          window(nullptr),
-          glContext(nullptr),
-          vertexSpec(0, 0),
-          shaderProgram(0)
-    {
-    }
+        : screenWidth(width), screenHeight(height) {}
 
     ~AppContext()
     {
-        SDL_GL_DeleteContext(glContext);
-        SDL_DestroyWindow(window);
+        if (glContext) SDL_GL_DeleteContext(glContext);
+        if (window) SDL_DestroyWindow(window);
         SDL_Quit();
         debug_println_("[Success] AppContext exits with no errors.");
     }
@@ -77,9 +67,18 @@ struct AppContext
 
         SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
+        SDL_DisplayMode mode;
+        const bool isDisplayModeSuccess = SDL_GetDesktopDisplayMode(0, &mode);
+        if (isDisplayModeSuccess != 0) // Dont need to crash on error. just use some defaults
+            println_("[ERROR] SDL2 could not get display information");
+
+        // mode.w is host width and mode.h is host height
+        const uint32_t windowX = isDisplayModeSuccess != 0 ? 0 : (mode.w / 2) - (screenWidth / 2);
+        const uint32_t windowY = isDisplayModeSuccess != 0 ? 0 : (mode.h / 2) - (screenHeight / 2);
+
         // Create SDL Window
         const uint32_t winFlags = SDL_WINDOW_OPENGL;
-        window = SDL_CreateWindow("My OpenGL App", 0, 0, screenWidth, screenHeight, winFlags);
+        window = SDL_CreateWindow("My OpenGL App", windowX, windowY, screenWidth, screenHeight, winFlags);
         if (window == nullptr)
         {
             std::cout << "[ERROR] SDL2 could not create a window.\n";
@@ -144,11 +143,9 @@ bool processInput()
     {
         switch (event.type)
         {
-        // handles OS asks for window close
-        case SDL_QUIT: {
+        case SDL_QUIT: // handles OS asks for window close
             println_("Goodbye!");
             return true;
-        }
         }
     }
 
@@ -238,9 +235,15 @@ VertexSpec setupVertexSpec()
     // glBufferData that will store the information in a vertexBufferObject.
     const std::vector<GLfloat> vertexPositions{
         //  x,     y,    z,
-        -0.8f, -0.8f, 0.0f, // vertex 1
-         0.8f, -0.8f, 0.0f, // vertex 2
-         0.0f,  0.8f, 0.0f, // vertex 3
+        -0.8f, -0.8f, 0.0f, // vertex 1 bottom left
+         0.8f, -0.8f, 0.0f, // vertex 2 bottom right
+         0.0f,  0.8f, 0.0f, // vertex 3 top middle
+    };
+
+    const std::vector<GLfloat> vertexColors{
+        1.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 1.0f,
     };
 
     // Setup for the GPU
@@ -261,6 +264,8 @@ VertexSpec setupVertexSpec()
 
     // VBO - Vertex Buffer Object
     GLuint vertexBufferObject = 0;
+    GLuint vertexBufferObjectColors = 0;
+
     // Create a new buffer and set the id to &vertexBufferObject
     glGenBuffers(1, &vertexBufferObject);
     // Bind or select the buffer that we want to work with at the moment
@@ -274,7 +279,7 @@ VertexSpec setupVertexSpec()
 
     // For a given VAO we need to tell how the data in the buffer will be used
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, // index: index of vertexAttrib to use
+    glVertexAttribPointer(0, // index: index defined by glEnableVertexAttribArray
                           3, // size: what is the number of components on our data chunks. in our case
                              // is 3 chunk = vertex and components is the x, y, z coords
                           GL_FLOAT, // type: type of the data
@@ -282,12 +287,31 @@ VertexSpec setupVertexSpec()
                           sizeof(GLfloat) * 3, // stride: is the size of the chunks
                           (void*) 0); // pointer: in case there is a offset before the data to be used
 
-    // Clean up
-    glBindVertexArray(0); // Unbind the current VAO
-    glDisableVertexAttribArray(0); // Disables/Closes any vertex attrib opened
+    // Setting up VBO for vertexColors
+    glGenBuffers(1, &vertexBufferObjectColors);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBufferObjectColors);
+    glBufferData(GL_ARRAY_BUFFER,
+                 vertexColors.size() * sizeof(GLfloat),
+                 vertexColors.data(),
+                 GL_STATIC_DRAW);
 
-    VertexSpec spec(vertexArrayObject, vertexBufferObject);
-    return spec;
+    // Linking the attributes of the VAO
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1,                   // index
+                          3,                   // size: r, g, b
+                          GL_FLOAT,            // type
+                          GL_FALSE,            // normalized?
+                          sizeof(GLfloat) * 3, // stride
+                          (void*) 0);          // pointer
+
+    // Clean up -Unbind the current VAO
+    glBindVertexArray(0);
+
+    // Disables/Closes any vertex attrib opened
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+
+    return { vertexArrayObject, vertexBufferObject, vertexBufferObjectColors };
 }
 
 /**
