@@ -7,7 +7,7 @@
 #include <algorithm> // std::max
 
 #include "macros.h"
-#include "constants.h"
+//#include "constants.h"
 
 struct FpsState
 {
@@ -49,7 +49,7 @@ struct AppContext
         SDL_GL_DeleteContext(glContext);
         SDL_DestroyWindow(window);
         SDL_Quit();
-        DEBUG("[Success] AppContext exits with no errors.\n");
+        debug_println_("[Success] AppContext exits with no errors.");
     }
 
     bool init()
@@ -60,7 +60,7 @@ struct AppContext
             std::cout << "[ERROR] SDL2 could not initialize video subsystem.\n";
             return false;
         }
-        DEBUG("[Success] SDL initialized video subsystem.\n");
+        debug_println_("[Success] SDL initialized video subsystem.");
 
         // Set opengl version 4.1
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
@@ -83,7 +83,7 @@ struct AppContext
             SDL_Quit();
             return false;
         }
-        DEBUG("[Success] Window is ready to go.\n");
+        debug_println_("[Success] Window is ready to go.");
 
         // Create OpenGL Context
         glContext = SDL_GL_CreateContext(window);
@@ -94,7 +94,7 @@ struct AppContext
             SDL_Quit();
             return false;
         }
-        DEBUG("[Success] OpenGl context created.\n");
+        debug_println_("[Success] OpenGl context created.");
 
         // Init glad
         if (!gladLoadGLLoader(SDL_GL_GetProcAddress))
@@ -105,7 +105,7 @@ struct AppContext
             SDL_Quit();
             return false;
         }
-        DEBUG("[Success] Glad loaded. OpenGL functions available.\n");
+        debug_println_("[Success] Glad loaded. OpenGL functions available.");
 
         return true;
     }
@@ -126,7 +126,7 @@ bool processInput()
         {
         // handles OS asks for window close
         case SDL_QUIT: {
-            std::cout << "Goodbye!\n";
+            println_("Goodbye!");
             return true;
         }
         }
@@ -204,10 +204,10 @@ void mainLoop(AppContext& app)
 
 void getOpenGLVersionInfo()
 {
-    std::cout << "Vendor: "           << glGetString(GL_VENDOR)                    << '\n'
-              << "Renderer: "         << glGetString(GL_RENDERER)                  << '\n'
-              << "Version: "          << glGetString(GL_VERSION)                   << '\n'
-              << "Shading Language: " << glGetString(GL_SHADING_LANGUAGE_VERSION)  << '\n';
+    println_("Vendor: "           << glGetString(GL_VENDOR));
+    println_("Renderer: "         << glGetString(GL_RENDERER));
+    println_("Version: "          << glGetString(GL_VERSION));
+    println_("Shading Language: " << glGetString(GL_SHADING_LANGUAGE_VERSION));
 }
 
 VertexSpec setupVertexSpec()

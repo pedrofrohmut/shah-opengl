@@ -15,3 +15,4 @@
 - [16x9 Resolutions](https://pacoup.com/2011/06/12/list-of-true-169-resolutions/)
 - [Learn OpenGL](https://learnopengl.com/)
 - [Cpp Reference](https://en.cppreference.com/)
+- [WebGL State Diagram](https://webglfundamentals.org/webgl/lessons/resources/webgl-state-diagram.html)
