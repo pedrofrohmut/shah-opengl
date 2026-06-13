@@ -22,6 +22,7 @@ struct VertexSpec
 {
     GLuint vertexArrayObject;
     GLuint vertexBufferObject;
+    GLuint indexBufferObject;
 };
 
 struct AppContext
@@ -175,11 +176,18 @@ void preDraw(AppContext& app)
 void draw(AppContext& app)
 {
     // Select VAO and VBO for drawing
+    // glBindVertexArray(app.vertexSpec.vertexArrayObject);
+    // glBindBuffer(GL_ARRAY_BUFFER, app.vertexSpec.vertexBufferObject); // Without IBO
+
+    // Select VAO and IBO
     glBindVertexArray(app.vertexSpec.vertexArrayObject);
-    glBindBuffer(GL_ARRAY_BUFFER, app.vertexSpec.vertexBufferObject);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app.vertexSpec.indexBufferObject);
 
     // Draw a triangle with the selected VAO and VBO
-    glDrawArrays(GL_TRIANGLES, 0 , 6);
+    // glDrawArrays(GL_TRIANGLES, 0 , 6);
+
+    // Draw triangles with the VAO and IBO selected
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
     // Stop using current shaderProgram.
     // Obs: Not necessary if using only 1 graphics pipeline.
@@ -236,24 +244,21 @@ VertexSpec setupVertexSpec()
     // to know what is the front and back faces of the triangles.
     const std::vector<GLfloat> vertexData
     {
-        //  x,     y,     z, // position
-        //  r,     g,     b, // color
+        // 0 - Vertex
+         -0.5f, -0.5f,  0.0f, // Bottom-left vertex
+          1.0f,  0.0f,  0.0f, // Color red
 
-        // First triangle CCW
-        -0.5f, -0.5f,  0.0f, // 0 Bottom-left vertex
-         1.0f,  0.0f,  0.0f, // Color 1 red
-         0.5f, -0.5f,  0.0f, // 1 Bottom-right vertex
-         0.0f,  1.0f,  0.0f, // Color 2 green
-        -0.5f,  0.5f,  0.0f, // 2 Top-left vertex
-         0.0f,  0.0f,  1.0f, // Color 3 blue
+        // 1 - Vertex
+          0.5f, -0.5f,  0.0f, // Bottom-right vertex
+          0.0f,  1.0f,  0.0f, // Color green
 
-         // Second triangle CCW
-        -0.5f,  0.5f,  0.0f, // 0 Top-left vertex
-         0.0f,  0.0f,  1.0f, // Color 3 blue
-         0.5f, -0.5f,  0.0f, // 1 Bottom-right vertex
-         0.0f,  1.0f,  0.0f, // Color 2 green
-         0.5f,  0.5f,  0.0f, // 2 Top-right vertex
-         1.0f,  0.0f,  0.0f, // Color 1 red
+        // 2 - Vertex
+         -0.5f,  0.5f,  0.0f, // Top-left vertex
+          0.0f,  0.0f,  1.0f, // Color blue
+
+        // 3 - Vertex
+          0.5f,  0.5f,  0.0f, // Top-right vertex
+          1.0f,  0.0f,  0.0f, // Color red
     };
 
     // Setup for the GPU
@@ -285,6 +290,23 @@ VertexSpec setupVertexSpec()
                  vertexData.data(),                    // raw pointer to ram data (stack or heap)
                  GL_STATIC_DRAW);                      // expected usage
 
+
+    // Index Buffer Object (IBO or EBO)
+    // This is used to store the array of indicies that we want to draw from.
+    GLuint indexBufferObject = 0;
+    // Setup the Index Buffer Object (IBO i.e. EBO)
+    glGenBuffers(1, &indexBufferObject);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferObject);
+    const std::vector<GLuint> indexBufferData
+    {
+        2, 0, 1, // first triangle
+        2, 1, 3, // second triangle
+    };
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,                  // target
+                 indexBufferData.size() * sizeof(GLuint),  // size of data
+                 indexBufferData.data(),                   // raw pointer to data
+                 GL_STATIC_DRAW);                          // expected usage
+
     // For a given VAO we need to tell how the data in the buffer will be used
     glEnableVertexAttribArray(0); // VAO for positions
     glVertexAttribPointer(0, // index: index defined by glEnableVertexAttribArray
@@ -311,7 +333,7 @@ VertexSpec setupVertexSpec()
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
 
-    return { vertexArrayObject, vertexBufferObject };
+    return { vertexArrayObject, vertexBufferObject, indexBufferObject };
 }
 
 /**
