@@ -179,7 +179,7 @@ void draw(AppContext& app)
     glBindBuffer(GL_ARRAY_BUFFER, app.vertexSpec.vertexBufferObject);
 
     // Draw a triangle with the selected VAO and VBO
-    glDrawArrays(GL_TRIANGLES, 0 , 3);
+    glDrawArrays(GL_TRIANGLES, 0 , 6);
 
     // Stop using current shaderProgram.
     // Obs: Not necessary if using only 1 graphics pipeline.
@@ -228,19 +228,32 @@ void getOpenGLVersionInfo()
 
 VertexSpec setupVertexSpec()
 {
-    // Geometry Data:
-    // Stores x, y, z positions for the vertexes, It is initially store in the cpu + ram memory
-    // in the vector. Later this will be stored in the gpu + vram, to do this we call
-    // glBufferData that will store the information in a vertexBufferObject.
-    // Combine both positions and colors in one data array to have only on VBO
-    const std::vector<GLfloat> vertexData{
-        //  x,     y,    z,
-        -0.8f, -0.8f,  0.0f, // Position 1 bottom left
-         1.0f,  0.0f,  0.0f, // Color 1
-         0.8f, -0.8f,  0.0f, // Position 2 bottom right
-         0.0f,  1.0f,  0.0f, // Color 2
-         0.0f,  0.8f,  0.0f, // Position 3 top middle
-         0.0f,  0.0f,  1.0f, // Color 3
+    // VertexData: stores the positions + colors of the triangles in the main memory. Later this
+    // will be transfered to the gpu by a VBO.
+
+    // Winding order: the order that the points are store. Could be CCW or CW, it does not matter
+    // with one you take but all triangle should be in the same winding order. This is important
+    // to know what is the front and back faces of the triangles.
+    const std::vector<GLfloat> vertexData
+    {
+        //  x,     y,     z, // position
+        //  r,     g,     b, // color
+
+        // First triangle CCW
+        -0.5f, -0.5f,  0.0f, // 0 Bottom-left vertex
+         1.0f,  0.0f,  0.0f, // Color 1 red
+         0.5f, -0.5f,  0.0f, // 1 Bottom-right vertex
+         0.0f,  1.0f,  0.0f, // Color 2 green
+        -0.5f,  0.5f,  0.0f, // 2 Top-left vertex
+         0.0f,  0.0f,  1.0f, // Color 3 blue
+
+         // Second triangle CCW
+        -0.5f,  0.5f,  0.0f, // 0 Top-left vertex
+         0.0f,  0.0f,  1.0f, // Color 3 blue
+         0.5f, -0.5f,  0.0f, // 1 Bottom-right vertex
+         0.0f,  1.0f,  0.0f, // Color 2 green
+         0.5f,  0.5f,  0.0f, // 2 Top-right vertex
+         1.0f,  0.0f,  0.0f, // Color 1 red
     };
 
     // Setup for the GPU
@@ -256,8 +269,7 @@ VertexSpec setupVertexSpec()
     glBindVertexArray(vertexArrayObject);
 
     // VAO defines how the gpu should understand the data and how to send it to the gpu
-    // VBO is the buffer of data
-    // that we use in the gpu.
+    // VBO is the buffer of data that we use in the gpu.
 
     // VBO - Vertex Buffer Object
     GLuint vertexBufferObject = 0;
