@@ -22,7 +22,6 @@ struct VertexSpec
 {
     GLuint vertexArrayObject;
     GLuint vertexBufferObject;
-    GLuint vertexBufferObjectColors;
 };
 
 struct AppContext
@@ -233,17 +232,15 @@ VertexSpec setupVertexSpec()
     // Stores x, y, z positions for the vertexes, It is initially store in the cpu + ram memory
     // in the vector. Later this will be stored in the gpu + vram, to do this we call
     // glBufferData that will store the information in a vertexBufferObject.
-    const std::vector<GLfloat> vertexPositions{
+    // Combine both positions and colors in one data array to have only on VBO
+    const std::vector<GLfloat> vertexData{
         //  x,     y,    z,
-        -0.8f, -0.8f, 0.0f, // vertex 1 bottom left
-         0.8f, -0.8f, 0.0f, // vertex 2 bottom right
-         0.0f,  0.8f, 0.0f, // vertex 3 top middle
-    };
-
-    const std::vector<GLfloat> vertexColors{
-        1.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 1.0f,
+        -0.8f, -0.8f,  0.0f, // Position 1 bottom left
+         1.0f,  0.0f,  0.0f, // Color 1
+         0.8f, -0.8f,  0.0f, // Position 2 bottom right
+         0.0f,  1.0f,  0.0f, // Color 2
+         0.0f,  0.8f,  0.0f, // Position 3 top middle
+         0.0f,  0.0f,  1.0f, // Color 3
     };
 
     // Setup for the GPU
@@ -264,7 +261,6 @@ VertexSpec setupVertexSpec()
 
     // VBO - Vertex Buffer Object
     GLuint vertexBufferObject = 0;
-    GLuint vertexBufferObjectColors = 0;
 
     // Create a new buffer and set the id to &vertexBufferObject
     glGenBuffers(1, &vertexBufferObject);
@@ -272,37 +268,29 @@ VertexSpec setupVertexSpec()
     glBindBuffer(GL_ARRAY_BUFFER, vertexBufferObject);
     // Here we populate the buffer (VBO) with the vertexPositions we defined before
     // That means data from ram to vram
-    glBufferData(GL_ARRAY_BUFFER,                           // type of buffer
-                 vertexPositions.size() * sizeof(GLfloat),  // size of data
-                 vertexPositions.data(),                    // raw pointer to ram data (stack or heap)
-                 GL_STATIC_DRAW);                           // expected usage
+    glBufferData(GL_ARRAY_BUFFER,                      // type of buffer
+                 vertexData.size() * sizeof(GLfloat),  // size of data
+                 vertexData.data(),                    // raw pointer to ram data (stack or heap)
+                 GL_STATIC_DRAW);                      // expected usage
 
     // For a given VAO we need to tell how the data in the buffer will be used
-    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(0); // VAO for positions
     glVertexAttribPointer(0, // index: index defined by glEnableVertexAttribArray
                           3, // size: what is the number of components on our data chunks. in our case
                              // is 3 chunk = vertex and components is the x, y, z coords
                           GL_FLOAT, // type: type of the data
                           GL_FALSE, // normalized: is the data normalized?
-                          sizeof(GLfloat) * 3, // stride: is the size of the chunks
-                          (void*) 0); // pointer: in case there is a offset before the data to be used
-
-    // Setting up VBO for vertexColors
-    glGenBuffers(1, &vertexBufferObjectColors);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBufferObjectColors);
-    glBufferData(GL_ARRAY_BUFFER,
-                 vertexColors.size() * sizeof(GLfloat),
-                 vertexColors.data(),
-                 GL_STATIC_DRAW);
+                          sizeof(GLfloat) * 6, // stride: the size of the chunk, here is position + colors
+                          (GLvoid*) 0); // pointer: in case there is a offset before the data to be used
 
     // Linking the attributes of the VAO
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1,                   // index
-                          3,                   // size: r, g, b
-                          GL_FLOAT,            // type
-                          GL_FALSE,            // normalized?
-                          sizeof(GLfloat) * 3, // stride
-                          (void*) 0);          // pointer
+    glEnableVertexAttribArray(1); // VAO for colors
+    glVertexAttribPointer(1,                          // index
+                          3,                          // size: r, g, b
+                          GL_FLOAT,                   // type
+                          GL_FALSE,                   // normalized?
+                          sizeof(GLfloat) * 6,        // stride
+                          (GLvoid*) (sizeof(GLfloat) * 3)); // pointer
 
     // Clean up -Unbind the current VAO
     glBindVertexArray(0);
@@ -311,7 +299,7 @@ VertexSpec setupVertexSpec()
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
 
-    return { vertexArrayObject, vertexBufferObject, vertexBufferObjectColors };
+    return { vertexArrayObject, vertexBufferObject };
 }
 
 /**
