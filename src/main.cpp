@@ -11,6 +11,59 @@
 
 #include "macros.h"
 
+static void clearAllGlErrors()
+{
+    while (glGetError() != GL_NO_ERROR) {}
+}
+
+static std::string getGlErrorString(GLenum error)
+{
+    switch (error)
+    {
+    case GL_NO_ERROR:
+        return "GL_NO_ERROR";
+    case GL_INVALID_ENUM:
+        return "GL_INVALID_ENUM";
+    case GL_INVALID_VALUE:
+        return "GL_INVALID_VALUE";
+    case GL_INVALID_OPERATION:
+        return "GL_INVALID_OPERATION";
+    case GL_INVALID_FRAMEBUFFER_OPERATION:
+        return "GL_INVALID_FRAMEBUFFER_OPERATION";
+    case GL_OUT_OF_MEMORY:
+        return "GL_OUT_OF_MEMORY";
+    case GL_STACK_UNDERFLOW:
+        return "GL_STACK_UNDERFLOW";
+    case GL_STACK_OVERFLOW:
+        return "GL_STACK_OVERFLOW";
+    default:
+        return "UNKNOWN_GL_ERROR";
+    }
+}
+
+static bool checkGlErrorStatus(const char* function, int line)
+{
+    bool hasErrors = false;
+    while (GLenum error = glGetError())
+    {
+        println_(
+          "--------------------------------------------------------------------------------\n" <<
+          "OpenGL Error: '" << getGlErrorString(error) <<
+          "'.\nLine: "      << line <<
+          ".\nFunction: "   << function <<
+          ".\n--------------------------------------------------------------------------------"
+        );
+        hasErrors = true;
+    }
+    return hasErrors;
+}
+
+#ifdef DEBUG_MODE
+    #define glCheck_(x) clearAllGlErrors(); x; checkGlErrorStatus(#x, __LINE__);
+#else
+    #define glCheck_(x) x;
+#endif
+
 struct FpsState
 {
     uint64_t previousFrame;
@@ -180,18 +233,18 @@ void draw(AppContext& app)
     // glBindBuffer(GL_ARRAY_BUFFER, app.vertexSpec.vertexBufferObject); // Without IBO
 
     // Select VAO and IBO
-    glBindVertexArray(app.vertexSpec.vertexArrayObject);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app.vertexSpec.indexBufferObject);
+    glCheck_(glBindVertexArray(app.vertexSpec.vertexArrayObject));
+    glCheck_(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app.vertexSpec.indexBufferObject));
 
     // Draw a triangle with the selected VAO and VBO
     // glDrawArrays(GL_TRIANGLES, 0 , 6);
 
     // Draw triangles with the VAO and IBO selected
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+    glCheck_(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
 
     // Stop using current shaderProgram.
     // Obs: Not necessary if using only 1 graphics pipeline.
-    glUseProgram(0);
+    glCheck_(glUseProgram(0));
 }
 
 void showFps(FpsState& state)
