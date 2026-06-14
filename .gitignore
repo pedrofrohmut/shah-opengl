@@ -1,3 +1,8 @@
 # executables
 app_debug
 app
+a.out
+test_glm
+
+# deps folder
+deps/
