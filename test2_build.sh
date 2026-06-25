@@ -1,3 +1,4 @@
 #! /usr/bin/env bash
 
-g++ -std=c++23 -o test2_glm src/test_glm2.cpp -I ./deps/glm/
+g++ -g -std=c++23 -o ./out/test2_glm src/test2_glm.cpp -I ./deps/glm/
+# g++ -g -std=c++23 -o ./out/a.out src/test2_glm.cpp -I ./deps/glm/

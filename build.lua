@@ -14,8 +14,8 @@ local print_help = function()
 end
 
 local main = function()
-   local keep_apps = false
-   local is_dev = false
+   local keep_apps = false -- Remove old executables by default
+   local is_dev = false -- Release build by default
 
    -- Read build args
    for i = 1, #arg do
@@ -38,7 +38,8 @@ local main = function()
 
    -- Setup build command for linux
    local flags = is_dev and dev_flags or release_flags
-   local app_name = is_dev and "app_debug" or "app"
+   local app_name = "./out/" .. (is_dev and "app_debug" or "app")
+   print("app_name: "..app_name)
    local build_cmd = table.concat(
       {
          "g++", "-Wall -Wextra --std=c++17", flags,

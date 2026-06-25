@@ -2,7 +2,8 @@
 app_debug
 app
 a.out
-test_glm
+test*_glm
+out/
 
 # deps folder
 deps/
