@@ -1,6 +1,9 @@
 // Third part deps
 #include <SDL2/SDL.h>
 #include <glad/glad.h>
+#include <glm/glm.hpp>
+#include <glm/vec3.hpp>
+#include <glm/mat4x4.hpp>
 
 // Cpp STD
 #include <iostream>
@@ -86,6 +89,7 @@ struct AppContext
     SDL_GLContext glContext = nullptr;
     VertexSpec vertexSpec = {};
     GLuint shaderProgram = 0;
+    float uOffset = 0.0f;
 
     AppContext(uint32_t width, uint32_t height)
         : screenWidth(width), screenHeight(height) {}
@@ -96,6 +100,18 @@ struct AppContext
         if (window) SDL_DestroyWindow(window);
         SDL_Quit();
         debug_println_("[Success] AppContext exits with no errors.");
+    }
+
+    void quit(uint32_t errorCode)
+    {
+        if (glContext) SDL_GL_DeleteContext(glContext);
+        if (window) SDL_DestroyWindow(window);
+        SDL_Quit();
+        if (errorCode == 0)
+            debug_println_("[Success] Quiting the app.");
+        else
+            debug_println_("[ERROR] Something bad happend. Code: " << errorCode << ". Quiting the app.");
+        exit(errorCode);
     }
 
     bool init()
@@ -125,6 +141,7 @@ struct AppContext
         if (isDisplayModeSuccess != 0) // Dont need to crash on error. just use some defaults
             println_("[ERROR] SDL2 could not get display information");
 
+        // Get x and y of the display to center the window at start
         // mode.w is host width and mode.h is host height
         const uint32_t windowX = isDisplayModeSuccess != 0 ? 0 : (mode.w / 2) - (screenWidth / 2);
         const uint32_t windowY = isDisplayModeSuccess != 0 ? 0 : (mode.h / 2) - (screenHeight / 2);
@@ -135,7 +152,6 @@ struct AppContext
         if (window == nullptr)
         {
             std::cout << "[ERROR] SDL2 could not create a window.\n";
-            SDL_Quit();
             return false;
         }
         debug_println_("[Success] Window is ready to go.");
@@ -145,8 +161,6 @@ struct AppContext
         if (glContext == nullptr)
         {
             std::cout << "[ERROR] SDL2 could not create OpenGL context.\n";
-            SDL_DestroyWindow(window);
-            SDL_Quit();
             return false;
         }
         debug_println_("[Success] OpenGl context created.");
@@ -155,9 +169,6 @@ struct AppContext
         if (!gladLoadGLLoader(SDL_GL_GetProcAddress))
         {
             std::cout << "[ERROR] Glad failed to initialize\n";
-            SDL_GL_DeleteContext(glContext);
-            SDL_DestroyWindow(window);
-            SDL_Quit();
             return false;
         }
         debug_println_("[Success] Glad loaded. OpenGL functions available.");
@@ -187,7 +198,7 @@ std::string loadShaderAsString(const std::string& fileName)
  * processInput called in the main loop to handle sdl events queue
  * @return boolean to signal if app should close
  */
-bool processInput()
+bool processInput(AppContext& app)
 {
     SDL_Event event;
 
@@ -200,6 +211,19 @@ bool processInput()
             println_("Goodbye!");
             return true;
         }
+    }
+
+    // Retrieve keyboard state
+    const uint8_t* state = SDL_GetKeyboardState(nullptr);
+    if (state[SDL_SCANCODE_UP])
+    {
+        app.uOffset += 0.01f;
+        // printf_("app.uOffset = {}\n", app.uOffset);
+    }
+    if (state[SDL_SCANCODE_DOWN])
+    {
+        app.uOffset -= 0.01f;
+        // printf_("app.uOffset = {}\n", app.uOffset);
     }
 
     return false;
@@ -220,6 +244,14 @@ void preDraw(AppContext& app)
     glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT); // Clear buffers to be paint
 
     glUseProgram(app.shaderProgram); // Select current program to be used
+    const GLchar* uniformName = "u_offset";
+    GLint location = glGetUniformLocation(app.shaderProgram, uniformName); // gets uniform location to use
+    if (location < 0) // negative values in case of not found
+    {
+        printf_("[ERROR] Could not find uniform location for '{}'\n", uniformName);
+        app.quit(1);
+    }
+    glUniform1f(location, app.uOffset); // Pass the cpu value to the gpu
 }
 
 /**
@@ -271,7 +303,7 @@ void mainLoop(AppContext& app)
 
     while (!shouldClose)
     {
-        shouldClose = processInput();
+        shouldClose = processInput(app);
         preDraw(app);
         draw(app);
         SDL_GL_SwapWindow(app.window); // Updates the screen
@@ -496,7 +528,9 @@ int main(void)
 
     // Create Init SDL, create Window, create OpenGL Context, Init Glad, return true if all ok.
     if (!app.init())
-        return 1;
+    {
+        app.quit(1);
+    }
 
     getOpenGLVersionInfo();
 
@@ -527,3 +561,6 @@ int main(void)
 
     return 0;
 }
+
+// Including other source files to make a single compile unit
+#include "./glad.c"
