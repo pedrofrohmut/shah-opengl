@@ -38,23 +38,23 @@ local main = function()
 
    -- Setup build command for linux
    local flags = is_dev and dev_flags or release_flags
-   local app_name = "./out/" .. (is_dev and "app_debug" or "app")
+   local app_name = is_dev and "out/app_debug" or "app"
    print("app_name: "..app_name)
    local build_cmd = table.concat(
       {
-         "g++", "-Wall -Wextra --std=c++17", flags,
-         "-I./include",
-         "-o ", app_name,
-         "./src/main.cpp ./src/glad.c",
+         "g++",
+         "-Wall -Wextra --std=c++20", flags, -- Flags
+         "-I ./include -I ./deps/glm/", -- Include path
+         "-o ", app_name, -- Output path
+         "./src/main.cpp", -- Source code
          "-ldl -lSDL2",
-         -- "-lGL",
       },
       " "
    )
 
    -- Remove old stuff (unless keep flag)
    if not keep_apps then
-      os.execute("rm -f app_debug app")
+      os.execute("rm -f out/app_debug app")
    end
 
    if is_dev then
