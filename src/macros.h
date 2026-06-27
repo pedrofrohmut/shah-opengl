@@ -48,3 +48,22 @@
     #define debug_println_(expr)
     #define debug_printf_(fmt, ...)
 #endif
+
+/*
+  Set a break point with code
+ */
+#ifdef WIN32
+    #define breakpoint_ __debugBreak();
+#else
+    #include <signal.h>
+    #define breakpoint_ raise(SIGTRAP);
+#endif // WIN32
+
+/*
+  Wrap opengl functions with clear errors then error check after
+*/
+#ifdef DEBUG_MODE
+    #define glCheck_(x) clearAllGlErrors(); x; checkGlErrorStatus(#x, __LINE__);
+#else
+    #define glCheck_(x) x;
+#endif

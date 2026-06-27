@@ -61,12 +61,6 @@ static bool checkGlErrorStatus(const char* function, int line)
     return hasErrors;
 }
 
-#ifdef DEBUG_MODE
-    #define glCheck_(x) clearAllGlErrors(); x; checkGlErrorStatus(#x, __LINE__);
-#else
-    #define glCheck_(x) x;
-#endif
-
 struct FpsState
 {
     uint64_t previousFrame;
@@ -89,7 +83,8 @@ struct AppContext
     SDL_GLContext glContext = nullptr;
     VertexSpec vertexSpec = {};
     GLuint shaderProgram = 0;
-    float uOffset = 0.0f;
+    float uOffsetY = 0.0f;
+    float uOffsetX = 0.0f;
 
     AppContext(uint32_t width, uint32_t height)
         : screenWidth(width), screenHeight(height) {}
@@ -207,7 +202,7 @@ bool processInput(AppContext& app)
     {
         switch (event.type)
         {
-        case SDL_QUIT: // handles OS asks for window close
+        case SDL_QUIT: // handles OS asking for window to close
             println_("Goodbye!");
             return true;
         }
@@ -215,16 +210,14 @@ bool processInput(AppContext& app)
 
     // Retrieve keyboard state
     const uint8_t* state = SDL_GetKeyboardState(nullptr);
-    if (state[SDL_SCANCODE_UP])
-    {
-        app.uOffset += 0.01f;
-        // printf_("app.uOffset = {}\n", app.uOffset);
-    }
-    if (state[SDL_SCANCODE_DOWN])
-    {
-        app.uOffset -= 0.01f;
-        // printf_("app.uOffset = {}\n", app.uOffset);
-    }
+
+    // Move in Y axis
+    if (state[SDL_SCANCODE_UP]) app.uOffsetY += 0.01f;
+    if (state[SDL_SCANCODE_DOWN]) app.uOffsetY -= 0.01f;
+
+    // Move in X axis
+    if (state[SDL_SCANCODE_RIGHT]) app.uOffsetX += 0.01f;
+    if (state[SDL_SCANCODE_LEFT]) app.uOffsetX -= 0.01f;
 
     return false;
 }
@@ -244,14 +237,24 @@ void preDraw(AppContext& app)
     glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT); // Clear buffers to be paint
 
     glUseProgram(app.shaderProgram); // Select current program to be used
-    const GLchar* uniformName = "u_offset";
-    GLint location = glGetUniformLocation(app.shaderProgram, uniformName); // gets uniform location to use
-    if (location < 0) // negative values in case of not found
+
+    const GLchar* uniformNameY = "u_offsety";
+    GLint locationY = glGetUniformLocation(app.shaderProgram, uniformNameY); // gets uniform location to use
+    if (locationY < 0) // negative values in case of not found
     {
-        printf_("[ERROR] Could not find uniform location for '{}'\n", uniformName);
+        printf_("[ERROR] Could not find uniform locationY for '{}'\n", uniformNameY);
         app.quit(1);
     }
-    glUniform1f(location, app.uOffset); // Pass the cpu value to the gpu
+    glUniform1f(locationY, app.uOffsetY); // Pass the cpu value to the gpu
+
+    const GLchar* uniformNameX = "u_offsetx";
+    GLint locationX = glGetUniformLocation(app.shaderProgram, uniformNameX);
+    if (locationX < 0)
+    {
+        printf_("[ERROR] Could not find uniform locationX for '{}'\n", uniformNameX);
+        app.quit(1);
+    }
+    glUniform1f(locationX, app.uOffsetX);
 }
 
 /**
