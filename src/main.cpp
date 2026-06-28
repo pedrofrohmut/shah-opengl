@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 // Cpp STD
 #include <iostream>
@@ -238,23 +239,19 @@ void preDraw(AppContext& app)
 
     glUseProgram(app.shaderProgram); // Select current program to be used
 
-    const GLchar* uniformNameY = "u_offsety";
-    GLint locationY = glGetUniformLocation(app.shaderProgram, uniformNameY); // gets uniform location to use
-    if (locationY < 0) // negative values in case of not found
+    // Get uniform location
+    const GLchar* uniformName = "u_ModelMatrix";
+    GLint modelMatrixLocation = glGetUniformLocation(app.shaderProgram, uniformName);
+    // Checks if location was found
+    if (modelMatrixLocation < 0)
     {
-        printf_("[ERROR] Could not find uniform locationY for '{}'\n", uniformNameY);
+        printf_("[ERROR] Could not find uniform u_ModelMatrix for '{}'\n", uniformName);
         app.quit(1);
     }
-    glUniform1f(locationY, app.uOffsetY); // Pass the cpu value to the gpu
-
-    const GLchar* uniformNameX = "u_offsetx";
-    GLint locationX = glGetUniformLocation(app.shaderProgram, uniformNameX);
-    if (locationX < 0)
-    {
-        printf_("[ERROR] Could not find uniform locationX for '{}'\n", uniformNameX);
-        app.quit(1);
-    }
-    glUniform1f(locationX, app.uOffsetX);
+    // Translate matrix - used to update the uniform variable
+    glm::mat4 translate = glm::translate(glm::mat4(1.0f), glm::vec3(app.uOffsetX, app.uOffsetY, 0.0f));
+    // Changes the uniform value
+    glUniformMatrix4fv(modelMatrixLocation, 1, GL_FALSE, &translate[0][0]);
 }
 
 /**
