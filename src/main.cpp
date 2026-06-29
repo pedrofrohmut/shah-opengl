@@ -86,6 +86,7 @@ struct AppContext
     GLuint shaderProgram = 0;
     float uOffsetY = 0.0f;
     float uOffsetX = 0.0f;
+    float uOffsetZ = -2.0f;
 
     AppContext(uint32_t width, uint32_t height)
         : screenWidth(width), screenHeight(height) {}
@@ -213,14 +214,53 @@ bool processInput(AppContext& app)
     const uint8_t* state = SDL_GetKeyboardState(nullptr);
 
     // Move in Y axis
-    if (state[SDL_SCANCODE_UP]) app.uOffsetY += 0.01f;
-    if (state[SDL_SCANCODE_DOWN]) app.uOffsetY -= 0.01f;
+    if (state[SDL_SCANCODE_UP])
+    {
+        app.uOffsetY += 0.01f;
+        printf_("Y offset: {}\n", app.uOffsetY);
+    }
+    if (state[SDL_SCANCODE_DOWN])
+    {
+        app.uOffsetY -= 0.01f;
+        printf_("Y offset: {}\n", app.uOffsetY);
+    }
 
     // Move in X axis
-    if (state[SDL_SCANCODE_RIGHT]) app.uOffsetX += 0.01f;
-    if (state[SDL_SCANCODE_LEFT]) app.uOffsetX -= 0.01f;
+    if (state[SDL_SCANCODE_RIGHT])
+    {
+        app.uOffsetX += 0.01f;
+        printf_("X offset: {}\n", app.uOffsetX);
+    }
+    if (state[SDL_SCANCODE_LEFT])
+    {
+        app.uOffsetX -= 0.01f;
+        printf_("X offset: {}\n", app.uOffsetX);
+    }
+
+    // Move in Z axis
+    if (state[SDL_SCANCODE_HOME])
+    {
+        app.uOffsetZ += 0.01f;
+        printf_("Z offset: {}\n", app.uOffsetZ);
+    }
+    if (state[SDL_SCANCODE_END])
+    {
+        app.uOffsetZ -= 0.01f;
+        printf_("Z offset: {}\n", app.uOffsetZ);
+    }
 
     return false;
+}
+
+GLint getUniformLocation(const GLchar* uniformName, AppContext& app)
+{
+    GLint location = glGetUniformLocation(app.shaderProgram, uniformName);
+    if (location < 0)
+    {
+        printf_("[ERROR] Could not find uniform variable for '{}'\n", uniformName);
+        app.quit(1);
+    }
+    return location;
 }
 
 /**
@@ -239,19 +279,24 @@ void preDraw(AppContext& app)
 
     glUseProgram(app.shaderProgram); // Select current program to be used
 
-    // Get uniform location
-    const GLchar* uniformName = "u_ModelMatrix";
-    GLint modelMatrixLocation = glGetUniformLocation(app.shaderProgram, uniformName);
-    // Checks if location was found
-    if (modelMatrixLocation < 0)
-    {
-        printf_("[ERROR] Could not find uniform u_ModelMatrix for '{}'\n", uniformName);
-        app.quit(1);
-    }
     // Translate matrix - used to update the uniform variable
-    glm::mat4 translate = glm::translate(glm::mat4(1.0f), glm::vec3(app.uOffsetX, app.uOffsetY, 0.0f));
-    // Changes the uniform value
+    // Model transformation by translating our object into world space
+    glm::mat4 translate = glm::translate(glm::mat4(1.0f), glm::vec3(app.uOffsetX, app.uOffsetY, app.uOffsetZ));
+
+    GLint modelMatrixLocation = getUniformLocation("u_ModelMatrix", app);
+    // Changes the uniform value in the shaders
     glUniformMatrix4fv(modelMatrixLocation, 1, GL_FALSE, &translate[0][0]);
+
+    // Projection matrix (in perspective)
+    const float fieldOfView =  glm::radians(45.0f);
+    const float aspectRatio = (float) app.screenWidth / (float) app.screenHeight;
+    const float nearClippingPlane = 0.1f; // How close you can see things
+    const float farClippingPlane = 10.0f; // How far you can see things
+    glm::mat4 projection = glm::perspective(fieldOfView, aspectRatio, nearClippingPlane, farClippingPlane);
+
+    GLint modelProjectionLocation = getUniformLocation("u_Projection", app);
+    // Changes the uniform value in the shaders
+    glUniformMatrix4fv(modelProjectionLocation, 1, GL_FALSE, &projection[0][0]);
 }
 
 /**
