@@ -87,6 +87,7 @@ struct AppContext
     float uOffsetY = 0.0f;
     float uOffsetX = 0.0f;
     float uOffsetZ = -2.0f;
+    float uOffsetRY = 0.0f;
 
     AppContext(uint32_t width, uint32_t height)
         : screenWidth(width), screenHeight(height) {}
@@ -204,8 +205,13 @@ bool processInput(AppContext& app)
     {
         switch (event.type)
         {
+        // TODO: Make the mouse commands to apply rotation
+        // case SDL_MOUSEMOTION: {
+        //     printf_("Mouse motion detected. X is {} and Y is {}\n",
+        //             event.motion.x, event.motion.y);
+        // } break;
         case SDL_QUIT: // handles OS asking for window to close
-            println_("Goodbye!");
+            debug_println_("Goodbye!");
             return true;
         }
     }
@@ -217,36 +223,48 @@ bool processInput(AppContext& app)
     if (state[SDL_SCANCODE_UP])
     {
         app.uOffsetY += 0.01f;
-        printf_("Y offset: {}\n", app.uOffsetY);
+        debug_printf_("Y offset: {}\n", app.uOffsetY);
     }
     if (state[SDL_SCANCODE_DOWN])
     {
         app.uOffsetY -= 0.01f;
-        printf_("Y offset: {}\n", app.uOffsetY);
+        debug_printf_("Y offset: {}\n", app.uOffsetY);
     }
 
     // Move in X axis
     if (state[SDL_SCANCODE_RIGHT])
     {
         app.uOffsetX += 0.01f;
-        printf_("X offset: {}\n", app.uOffsetX);
+        debug_printf_("X offset: {}\n", app.uOffsetX);
     }
     if (state[SDL_SCANCODE_LEFT])
     {
         app.uOffsetX -= 0.01f;
-        printf_("X offset: {}\n", app.uOffsetX);
+        debug_printf_("X offset: {}\n", app.uOffsetX);
     }
 
     // Move in Z axis
     if (state[SDL_SCANCODE_HOME])
     {
         app.uOffsetZ += 0.01f;
-        printf_("Z offset: {}\n", app.uOffsetZ);
+        debug_printf_("Z offset: {}\n", app.uOffsetZ);
     }
     if (state[SDL_SCANCODE_END])
     {
         app.uOffsetZ -= 0.01f;
-        printf_("Z offset: {}\n", app.uOffsetZ);
+        debug_printf_("Z offset: {}\n", app.uOffsetZ);
+    }
+
+    // Rotate Y
+    if (state[SDL_SCANCODE_A])
+    {
+        app.uOffsetRY -= 1.0f;
+        debug_printf_("RotateY offset: {}\n", app.uOffsetRY);
+    }
+    if (state[SDL_SCANCODE_D])
+    {
+        app.uOffsetRY += 1.0f;
+        debug_printf_("RotateY offset: {}\n", app.uOffsetRY);
     }
 
     return false;
@@ -281,22 +299,31 @@ void preDraw(AppContext& app)
 
     // Translate matrix - used to update the uniform variable
     // Model transformation by translating our object into world space
-    glm::mat4 translate = glm::translate(glm::mat4(1.0f), glm::vec3(app.uOffsetX, app.uOffsetY, app.uOffsetZ));
+    glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(app.uOffsetX, app.uOffsetY, app.uOffsetZ));
+
+    // Apply rotation to the model matrix
+    {
+        // const float angle = glm::radians(45.0f);
+        const float angle = glm::radians(app.uOffsetRY);
+        const glm::vec3 axis = glm::vec3(0.0f, 1.0f, 0.0f);
+        model = glm::rotate(model, angle, axis);
+    }
 
     GLint modelMatrixLocation = getUniformLocation("u_ModelMatrix", app);
-    // Changes the uniform value in the shaders
-    glUniformMatrix4fv(modelMatrixLocation, 1, GL_FALSE, &translate[0][0]);
+    glUniformMatrix4fv(modelMatrixLocation, 1, GL_FALSE, &model[0][0]); // Changes the uniform value in the shaders
 
     // Projection matrix (in perspective)
-    const float fieldOfView =  glm::radians(45.0f);
-    const float aspectRatio = (float) app.screenWidth / (float) app.screenHeight;
-    const float nearClippingPlane = 0.1f; // How close you can see things
-    const float farClippingPlane = 10.0f; // How far you can see things
-    glm::mat4 projection = glm::perspective(fieldOfView, aspectRatio, nearClippingPlane, farClippingPlane);
+    glm::mat4 projection;
+    {
+        const float fieldOfView =  glm::radians(45.0f);
+        const float aspectRatio = (float) app.screenWidth / (float) app.screenHeight;
+        const float nearClippingPlane = 0.1f; // How close you can see things
+        const float farClippingPlane = 10.0f; // How far you can see things
+        projection = glm::perspective(fieldOfView, aspectRatio, nearClippingPlane, farClippingPlane);
+    }
 
     GLint modelProjectionLocation = getUniformLocation("u_Projection", app);
-    // Changes the uniform value in the shaders
-    glUniformMatrix4fv(modelProjectionLocation, 1, GL_FALSE, &projection[0][0]);
+    glUniformMatrix4fv(modelProjectionLocation, 1, GL_FALSE, &projection[0][0]); // Changes the uniform value in the shaders
 }
 
 /**
@@ -333,7 +360,7 @@ void showFps(FpsState& state)
     state.counter += 1;
     if (state.acc >= 1000)
     {
-        println_("fps: " << state.counter);
+        debug_println_("fps: " << state.counter);
         state.acc = 0;
         state.counter = 0;
     }
@@ -358,10 +385,10 @@ void mainLoop(AppContext& app)
 
 void getOpenGLVersionInfo()
 {
-    println_("Vendor: "           << glGetString(GL_VENDOR));
-    println_("Renderer: "         << glGetString(GL_RENDERER));
-    println_("Version: "          << glGetString(GL_VERSION));
-    println_("Shading Language: " << glGetString(GL_SHADING_LANGUAGE_VERSION));
+    debug_println_("Vendor: "           << glGetString(GL_VENDOR));
+    debug_println_("Renderer: "         << glGetString(GL_RENDERER));
+    debug_println_("Version: "          << glGetString(GL_VERSION));
+    debug_println_("Shading Language: " << glGetString(GL_SHADING_LANGUAGE_VERSION));
 }
 
 VertexSpec setupVertexSpec()
